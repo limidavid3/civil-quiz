@@ -226,7 +226,7 @@ function HomeScreen({ bank, onStart, onPaper }) {
     const raw = searchQ.trim();
     if (!raw) return;
     // Split by spaces, each keyword must match
-    const kwds = raw.split(/\s+/).map(k=>k.toLowerCase());
+    const kwds = raw.split(/ +/).map(k=>k.toLowerCase());
     const results = (bank||[]).filter((q, idx) => {
       const subName   = (getSub(q.sid)?.name||"").toLowerCase();
       const subShort  = (getSub(q.sid)?.short||"").toLowerCase();
@@ -742,8 +742,7 @@ function BankDrawer({ bank, refreshBank, syncState, onClose, setLb }) {
   const totalCount = (bank||[]).length;
 
   return(
-    <div style={{position:"fixed",inset:0,zIndex:100,display:"flex"}}>
-      <div style={{width:"100%",background:"#0f1016",display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}}>
+    <div style={{position:"fixed",inset:0,zIndex:100,background:"#0f1016",display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}}>
 
         {/* Header */}
         <div style={{padding:"14px 16px 10px",borderBottom:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
