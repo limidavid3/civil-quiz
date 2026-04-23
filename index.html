@@ -219,21 +219,30 @@ function HomeScreen({ bank, onStart, onPaper }) {
   const [mode,    setMode]    = useState("quiz");
   const [openSid, setOpenSid] = useState(null);
   const [searchQ, setSearchQ] = useState("");
-  const [searchResult, setSearchResult] = useState(null); // null | { found: [], keyword: "" }
+  const [searchResult, setSearchResult] = useState(null);
   const [searchLb, setSearchLb] = useState(null);
 
   const doSearch = () => {
-    const kw = searchQ.trim();
-    if (!kw) return;
-    const lower = kw.toLowerCase().replace(/^#/,"");
+    const raw = searchQ.trim();
+    if (!raw) return;
+    // Split by spaces, each keyword must match
+    const kwds = raw.split(/\s+/).map(k=>k.toLowerCase());
     const results = (bank||[]).filter((q, idx) => {
-      const srcStr = ((q.source_year||"") + (q.source_type||"")).toLowerCase();
-      const numMatch = String(idx+1) === lower;
-      const srcMatch = srcStr.includes(lower) || (q.source_year||"").includes(lower) ||
-        (EXAM_TYPES.find(e=>e.id===q.source_type)?.label||"").includes(kw);
-      return numMatch || srcMatch;
-    }).map((q,_,arr)=>({...q, displayNum: (bank||[]).indexOf(q)+1 }));
-    setSearchResult({ found: results, keyword: kw });
+      const subName   = (getSub(q.sid)?.name||"").toLowerCase();
+      const subShort  = (getSub(q.sid)?.short||"").toLowerCase();
+      const unitName  = (getUnit(q.sid,q.uid)?.name||"").toLowerCase();
+      const year      = (q.source_year||"");
+      const typeLabel = (EXAM_TYPES.find(e=>e.id===q.source_type)?.label||"").toLowerCase();
+      const numStr    = String(idx+1);
+      return kwds.every(k => {
+        const isNum = k.replace(/^#/,"");
+        if(/^\d+$/.test(isNum) && numStr===isNum) return true;
+        return year.includes(k) || typeLabel.includes(k) ||
+               subName.includes(k) || subShort.includes(k) ||
+               unitName.includes(k) || typeLabel.replace(/[【】()（）]/g,"").includes(k);
+      });
+    }).map(q=>({...q, displayNum: (bank||[]).indexOf(q)+1 }));
+    setSearchResult({ found: results, keyword: raw });
   };
   const bk=(sid,uid)=>`${sid}_${uid}`;
   const cntFor=(sid,uid)=>bank.filter(q=>q.sid===sid&&q.uid===uid).length;
@@ -264,7 +273,7 @@ function HomeScreen({ bank, onStart, onPaper }) {
         <div style={{fontSize:"11px",color:"#555",marginBottom:"8px",fontFamily:"'IBM Plex Mono',monospace",letterSpacing:"1px"}}>🔍 查找題目</div>
         <div style={{display:"flex",gap:"7px"}}>
           <input value={searchQ} onChange={e=>setSearchQ(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doSearch()}
-            placeholder="輸入年份、考試類別、或 #題號（例：113、高考、#3）"
+            placeholder="關鍵字用空格分隔（例：113 高考 土力 或 #3）"
             style={{flex:1,padding:"10px 14px",borderRadius:"9px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",color:"#ddd",fontSize:"13px",outline:"none"}}/>
           <button onClick={doSearch} style={{padding:"10px 16px",borderRadius:"9px",background:"linear-gradient(135deg,#4f82cc,#2f5fa0)",border:"none",color:"white",fontSize:"13px",fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>查找</button>
         </div>
@@ -293,24 +302,28 @@ function HomeScreen({ bank, onStart, onPaper }) {
                           <Pill color="#555" bg="rgba(255,255,255,0.03)" border="rgba(255,255,255,0.06)">{unit?.name}</Pill>
                           {srcLabel&&<span style={{fontSize:"10px",color:"#666"}}>📌 {srcLabel}</span>}
                         </div>
-                        {/* Thumbnail */}
-                        <div style={{display:"flex",gap:"6px"}}>
-                          {q.q_url&&(
-                            <div style={{flex:1,cursor:"pointer",borderRadius:"6px",overflow:"hidden",border:"1px solid rgba(255,255,255,0.06)"}}
+                        {/* Images */}
+                        {q.q_url&&(
+                          <div style={{marginBottom:"5px"}}>
+                            <div style={{fontSize:"10px",color:"#4f82cc",marginBottom:"3px"}}>🖼 題目（點擊放大）</div>
+                            <div style={{cursor:"pointer",borderRadius:"7px",overflow:"hidden",border:"1px solid rgba(255,255,255,0.07)",background:"rgba(255,255,255,0.02)"}}
                               onClick={()=>setSearchLb({src:q.q_url,title:`#${q.displayNum} 題目`})}>
-                              <img src={q.q_url} style={{width:"100%",maxHeight:"100px",objectFit:"contain",display:"block",padding:"4px"}} alt="q"/>
+                              <img src={q.q_url} style={{width:"100%",height:"auto",display:"block"}} alt="q"/>
                             </div>
-                          )}
-                          {q.a_url&&(
-                            <div style={{flex:1,cursor:"pointer",borderRadius:"6px",overflow:"hidden",border:"1px solid rgba(61,158,110,0.2)",background:"rgba(61,158,110,0.04)"}}
+                          </div>
+                        )}
+                        {q.a_url&&(
+                          <div style={{marginBottom:"5px"}}>
+                            <div style={{fontSize:"10px",color:"#3d9e6e",marginBottom:"3px"}}>✓ 答案（點擊放大）</div>
+                            <div style={{cursor:"pointer",borderRadius:"7px",overflow:"hidden",border:"1px solid rgba(61,158,110,0.2)",background:"rgba(61,158,110,0.03)"}}
                               onClick={()=>setSearchLb({src:q.a_url,title:`#${q.displayNum} 答案`})}>
-                              <img src={q.a_url} style={{width:"100%",maxHeight:"100px",objectFit:"contain",display:"block",padding:"4px"}} alt="a"/>
+                              <img src={q.a_url} style={{width:"100%",height:"auto",display:"block"}} alt="a"/>
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                         {q.explanation&&(
-                          <div style={{marginTop:"6px",fontSize:"11px",color:"#7255b8",background:"rgba(114,85,184,0.08)",border:"1px solid rgba(114,85,184,0.15)",borderRadius:"5px",padding:"5px 8px",lineHeight:1.6,whiteSpace:"pre-wrap"}}>
-                            {q.explanation.slice(0,200)}{q.explanation.length>200?"…":""}
+                          <div style={{marginTop:"5px",fontSize:"11px",color:"#9b6bbf",background:"rgba(114,85,184,0.07)",border:"1px solid rgba(114,85,184,0.15)",borderRadius:"5px",padding:"6px 9px",lineHeight:1.7,whiteSpace:"pre-wrap"}}>
+                            <span style={{fontWeight:700}}>🤖 AI 題解：</span>{q.explanation.slice(0,300)}{q.explanation.length>300?"…":""}
                           </div>
                         )}
                       </div>
@@ -730,8 +743,7 @@ function BankDrawer({ bank, refreshBank, syncState, onClose, setLb }) {
 
   return(
     <div style={{position:"fixed",inset:0,zIndex:100,display:"flex"}}>
-      <div onClick={onClose} style={{flex:1,background:"rgba(0,0,0,0.6)"}}/>
-      <div style={{width:"min(480px,100vw)",background:"#0f1016",borderLeft:"1px solid rgba(255,255,255,0.08)",display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}}>
+      <div style={{width:"100%",background:"#0f1016",display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}}>
 
         {/* Header */}
         <div style={{padding:"14px 16px 10px",borderBottom:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
@@ -848,17 +860,20 @@ function BankDrawer({ bank, refreshBank, syncState, onClose, setLb }) {
           </div>
         </>)}
       </div>
-    </div>
   );
 }
 
 const EXAM_TYPES = [
-  { id:"technician", label:"技師" },
-  { id:"highexam",   label:"高考" },
-  { id:"special",    label:"地特" },
-  { id:"state",      label:"國營" },
-  { id:"textbook",   label:"課本" },
-  { id:"other",      label:"其他" },
+  { id:"tech_civil",   label:"技師【土木】",   group:"技師" },
+  { id:"tech_struct",  label:"技師【結構】",   group:"技師" },
+  { id:"tech_geo_old", label:"技師【大地(舊)】",group:"技師" },
+  { id:"tech_geo_new", label:"技師【大地(新)】",group:"技師" },
+  { id:"highexam",     label:"高考",           group:"" },
+  { id:"special",      label:"地特",           group:"" },
+  { id:"state",        label:"國營",           group:"" },
+  { id:"textbook",     label:"課本",           group:"" },
+  { id:"quiz",         label:"小考",           group:"" },
+  { id:"other",        label:"其他",           group:"" },
 ];
 
 // format source object → display string
@@ -941,17 +956,30 @@ function BankItem({ item, idx, sub, editing, setEditing, onDel, onPatch, onSetAI
               <span style={{fontSize:"11px",color:"#555"}}>年</span>
             </div>
             {/* Type chips */}
-            <div style={{display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap"}}>
-              <span style={{fontSize:"11px",color:"#666",flexShrink:0,width:"28px"}}>類別</span>
-              {EXAM_TYPES.map(e=>{
-                const sel = type===e.id;
-                return (
-                  <button key={e.id} onClick={()=>setType(sel?"":e.id)}
-                    style={{padding:"3px 10px",borderRadius:"20px",fontSize:"11px",fontWeight:sel?700:400,background:sel?sub.bg:"rgba(255,255,255,0.03)",border:`1px solid ${sel?sub.border:"rgba(255,255,255,0.08)"}`,color:sel?sub.color:"#555",cursor:"pointer"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:"5px"}}>
+              <span style={{fontSize:"11px",color:"#666"}}>類別</span>
+              {/* Technician group */}
+              <div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>
+                <span style={{fontSize:"10px",color:"#555",alignSelf:"center",flexShrink:0}}>技師：</span>
+                {EXAM_TYPES.filter(e=>e.group==="技師").map(e=>{
+                  const sel=type===e.id;
+                  return <button key={e.id} onClick={()=>setType(sel?"":e.id)}
+                    style={{padding:"3px 9px",borderRadius:"20px",fontSize:"10px",fontWeight:sel?700:400,background:sel?sub.bg:"rgba(255,255,255,0.03)",border:`1px solid ${sel?sub.border:"rgba(255,255,255,0.08)"}`,color:sel?sub.color:"#555",cursor:"pointer"}}>
+                    {sel?"✓ ":""}{e.label.replace("技師【","【")}
+                  </button>;
+                })}
+              </div>
+              {/* Other types */}
+              <div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>
+                <span style={{fontSize:"10px",color:"#555",alignSelf:"center",flexShrink:0}}>其他：</span>
+                {EXAM_TYPES.filter(e=>e.group!=="技師").map(e=>{
+                  const sel=type===e.id;
+                  return <button key={e.id} onClick={()=>setType(sel?"":e.id)}
+                    style={{padding:"3px 9px",borderRadius:"20px",fontSize:"10px",fontWeight:sel?700:400,background:sel?sub.bg:"rgba(255,255,255,0.03)",border:`1px solid ${sel?sub.border:"rgba(255,255,255,0.08)"}`,color:sel?sub.color:"#555",cursor:"pointer"}}>
                     {sel?"✓ ":""}{e.label}
-                  </button>
-                );
-              })}
+                  </button>;
+                })}
+              </div>
             </div>
             {/* Save */}
             <div style={{display:"flex",gap:"6px",justifyContent:"flex-end"}}>
