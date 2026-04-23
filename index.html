@@ -643,75 +643,128 @@ function BankDrawer({ bank, refreshBank, syncState, onClose, setLb }) {
 
   const syncColors={loading:"#555",saving:"#c8922a",ok:"#3d9e6e",error:"#d95f3b"};
   const curSyncState = opState!=="ok" ? opState : syncState;
+  const [bankTab, setBankTab] = useState("overview"); // overview | edit
+  const totalCount = (bank||[]).length;
+
   return(
     <div style={{position:"fixed",inset:0,zIndex:100,display:"flex"}}>
       <div onClick={onClose} style={{flex:1,background:"rgba(0,0,0,0.6)"}}/>
-      <div style={{width:"min(420px,100vw)",background:"#0f1016",borderLeft:"1px solid rgba(255,255,255,0.08)",display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}}>
+      <div style={{width:"min(480px,100vw)",background:"#0f1016",borderLeft:"1px solid rgba(255,255,255,0.08)",display:"flex",flexDirection:"column",height:"100vh",overflow:"hidden"}}>
+
+        {/* Header */}
         <div style={{padding:"14px 16px 10px",borderBottom:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <div>
             <div style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:"9px",letterSpacing:"3px",color:"#4f82cc",marginBottom:"2px"}}>BANK</div>
             <div style={{fontSize:"15px",fontWeight:700,display:"flex",alignItems:"center",gap:"8px"}}>
               題庫管理
-              <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:"11px",color:syncColors[curSyncState]||"#555",fontWeight:400}}>
+              <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:"10px",color:syncColors[curSyncState]||"#555",fontWeight:400}}>
                 {curSyncState==="saving"?"⟳ 同步中…":curSyncState==="ok"?"● 已同步":curSyncState==="error"?"✕ 同步失敗":"⟳ 連線中"}
               </span>
             </div>
           </div>
-          <button onClick={onClose} style={{background:"rgba(255,255,255,0.05)",border:"none",color:"#666",width:32,height:32,borderRadius:"50%",fontSize:"16px"}}>✕</button>
+          <button onClick={onClose} style={{background:"rgba(255,255,255,0.05)",border:"none",color:"#666",width:32,height:32,borderRadius:"50%",fontSize:"16px",cursor:"pointer"}}>✕</button>
         </div>
-        <div style={{padding:"10px 14px 6px",borderBottom:"1px solid rgba(255,255,255,0.05)",flexShrink:0}}>
-          <div style={{display:"flex",gap:"4px",flexWrap:"wrap",marginBottom:"7px"}}>
-            {SUBJECTS.map(s=>{const cnt=bank.filter(q=>q.sid===s.id).length;return(
-              <button key={s.id} onClick={()=>{setSid(s.id);setUnitId(s.units[0].id);}} style={{padding:"3px 9px",borderRadius:"15px",fontSize:"11px",fontWeight:sid===s.id?700:400,background:sid===s.id?s.bg:"transparent",border:`1px solid ${sid===s.id?s.border:"rgba(255,255,255,0.07)"}`,color:sid===s.id?s.color:"#4a4a5a",whiteSpace:"nowrap"}}>
-                {s.short}{cnt>0&&<span style={{opacity:.5,marginLeft:2}}>·{cnt}</span>}
-              </button>
-            );})}
-          </div>
-          <div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>
-            {sub.units.map(u=>{const cnt=(bank||[]).filter(q=>q.sid===sid&&q.uid===u.id).length,act=unitId===u.id;return(
-              <button key={u.id} onClick={()=>setUnitId(u.id)} style={{padding:"2px 8px",borderRadius:"5px",fontSize:"10px",fontWeight:act?700:400,background:act?sub.bg:"transparent",border:`1px solid ${act?sub.border:"rgba(255,255,255,0.05)"}`,color:act?sub.color:"#3a3a4a",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"3px"}}>
-                <span style={{fontSize:"8px",color:IMP.colors[u.imp]}}>{IMP.stars[u.imp]}</span>{u.name}{cnt>0&&<span style={{color:act?sub.color:"#333",fontFamily:"'IBM Plex Mono',monospace"}}>{cnt}</span>}
-              </button>
-            );})}
-          </div>
+
+        {/* Tabs */}
+        <div style={{display:"flex",padding:"8px 14px 0",gap:"6px",borderBottom:"1px solid rgba(255,255,255,0.06)",flexShrink:0}}>
+          {[{v:"overview",l:`📊 總覽 (${totalCount})`},{v:"edit",l:"✏️ 管理題目"}].map(({v,l})=>(
+            <button key={v} onClick={()=>setBankTab(v)} style={{padding:"6px 14px",borderRadius:"7px 7px 0 0",fontSize:"12px",fontWeight:bankTab===v?700:400,background:bankTab===v?"rgba(79,130,204,0.12)":"transparent",border:`1px solid ${bankTab===v?"rgba(79,130,204,0.3)":"rgba(255,255,255,0.06)"}`,borderBottom:"none",color:bankTab===v?"#4f82cc":"#555",cursor:"pointer"}}>{l}</button>
+          ))}
         </div>
-        <div style={{padding:"8px 14px",borderBottom:"1px solid rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-          <div style={{fontSize:"11px",color:sub.color,fontWeight:600}}>{sub.name} · {unit?.name} <span style={{color:"#3a3a4a",fontWeight:400}}>({items.length}題)</span></div>
-          <button onClick={()=>qRef.current?.click()} style={{padding:"5px 12px",borderRadius:"6px",fontSize:"11px",fontWeight:600,background:`linear-gradient(135deg,${sub.color},${sub.color}cc)`,border:"none",color:"#fff",whiteSpace:"nowrap"}}>＋ 上傳</button>
-          <input ref={qRef} type="file" multiple accept="image/*" style={{display:"none"}} onChange={e=>{addQImgs(e.target.files);e.target.value="";}}/>
-        </div>
-        <div style={{flex:1,overflowY:"auto",padding:"10px 14px",display:"flex",flexDirection:"column",gap:"8px"}}>
-          {/* Upload progress */}
-          {uploading.length>0&&(
-            <div style={{borderRadius:"9px",background:"rgba(114,85,184,0.07)",border:"1px solid rgba(114,85,184,0.2)",padding:"10px 14px",display:"flex",flexDirection:"column",gap:"7px"}}>
-              <div style={{fontSize:"10px",color:"#9b6bbf",fontFamily:"'IBM Plex Mono',monospace",letterSpacing:"1px",marginBottom:"2px"}}>上傳中</div>
-              {uploading.map(u=>(
-                <div key={u.id} style={{display:"flex",alignItems:"center",gap:"8px"}}>
-                  <div style={{fontSize:"11px",color:u.step==="done"?"#3d9e6e":u.step==="error"?"#d95f3b":"#9b6bbf",flexShrink:0}}>
-                    {u.step==="done"?"✓":u.step==="error"?"✕":u.step==="ai"?"🤖":u.step==="uploading"?"☁️":"📷"}
+
+        {/* ── OVERVIEW TAB ── */}
+        {bankTab==="overview" && (
+          <div style={{flex:1,overflowY:"auto",padding:"14px"}}>
+            {SUBJECTS.map(s=>{
+              const subCnt=(bank||[]).filter(q=>q.sid===s.id).length;
+              return(
+                <div key={s.id} style={{marginBottom:"16px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}}>
+                    <div style={{fontSize:"13px",fontWeight:700,color:s.color}}>{s.name}</div>
+                    <div style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:"11px",color:"#444"}}>{subCnt} 題</div>
                   </div>
-                  <div style={{flex:1,fontSize:"11px",color:"#888",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u.name}</div>
-                  <div style={{fontSize:"10px",color:u.step==="done"?"#3d9e6e":u.step==="error"?"#d95f3b":"#7255b8",flexShrink:0,fontFamily:"'IBM Plex Mono',monospace"}}>
-                    {u.step==="reading"?"讀取圖片…":u.step==="uploading"?"上傳圖片…":u.step==="ai"?"AI 生成題解…":u.step==="saving"?"儲存中…":u.step==="done"?"完成":u.step==="error"?"失敗":"…"}
+                  <div style={{display:"flex",flexDirection:"column",gap:"3px"}}>
+                    {s.units.map(u=>{
+                      const cnt=(bank||[]).filter(q=>q.sid===s.id&&q.uid===u.id).length;
+                      if(cnt===0) return null;
+                      return(
+                        <div key={u.id} style={{display:"flex",alignItems:"center",gap:"8px",padding:"6px 10px",borderRadius:"7px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.05)",cursor:"pointer"}}
+                          onClick={()=>{setSid(s.id);setUnitId(u.id);setBankTab("edit");}}>
+                          <span style={{fontSize:"10px",color:IMP.colors[u.imp]}}>{IMP.stars[u.imp]}</span>
+                          <span style={{fontSize:"12px",color:"#aaa",flex:1}}>{u.name}</span>
+                          <span style={{fontFamily:"'IBM Plex Mono',monospace",fontSize:"11px",color:s.color,fontWeight:600}}>{cnt}</span>
+                          <span style={{fontSize:"10px",color:"#333"}}>→</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
+              );
+            })}
+            {totalCount===0&&<div style={{textAlign:"center",padding:"48px 0",color:"#333",fontSize:"13px"}}>題庫是空的<br/>切換到「管理題目」上傳</div>}
+          </div>
+        )}
+
+        {/* ── EDIT TAB ── */}
+        {bankTab==="edit" && (<>
+          {/* Subject + Unit selectors */}
+          <div style={{padding:"10px 14px 6px",borderBottom:"1px solid rgba(255,255,255,0.05)",flexShrink:0}}>
+            <div style={{display:"flex",gap:"4px",flexWrap:"wrap",marginBottom:"7px"}}>
+              {SUBJECTS.map(s=>{const cnt=(bank||[]).filter(q=>q.sid===s.id).length;return(
+                <button key={s.id} onClick={()=>{setSid(s.id);setUnitId(s.units[0].id);}} style={{padding:"3px 9px",borderRadius:"15px",fontSize:"11px",fontWeight:sid===s.id?700:400,background:sid===s.id?s.bg:"transparent",border:`1px solid ${sid===s.id?s.border:"rgba(255,255,255,0.07)"}`,color:sid===s.id?s.color:"#4a4a5a",whiteSpace:"nowrap",cursor:"pointer"}}>
+                  {s.short}{cnt>0&&<span style={{opacity:.5,marginLeft:2}}>·{cnt}</span>}
+                </button>
+              );})}
             </div>
-          )}
-          {(items||[]).length===0&&uploading.length===0&&(
-            <div onClick={()=>qRef.current?.click()} style={{border:"1px dashed rgba(255,255,255,0.07)",borderRadius:"9px",padding:"32px 16px",textAlign:"center",cursor:"pointer",color:"#2a2a3a",fontSize:"12px"}}>
-              <div style={{fontSize:"24px",marginBottom:"6px"}}>🖼</div>點擊上傳題目圖片
+            <div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>
+              {sub.units.map(u=>{const cnt=(bank||[]).filter(q=>q.sid===sid&&q.uid===u.id).length,act=unitId===u.id;return(
+                <button key={u.id} onClick={()=>setUnitId(u.id)} style={{padding:"2px 8px",borderRadius:"5px",fontSize:"10px",fontWeight:act?700:400,background:act?sub.bg:"transparent",border:`1px solid ${act?sub.border:"rgba(255,255,255,0.05)"}`,color:act?sub.color:"#3a3a4a",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"3px",cursor:"pointer"}}>
+                  <span style={{fontSize:"8px",color:IMP.colors[u.imp]}}>{IMP.stars[u.imp]}</span>{u.name}{cnt>0&&<span style={{color:act?sub.color:"#333",fontFamily:"'IBM Plex Mono',monospace"}}>{cnt}</span>}
+                </button>
+              );})}
             </div>
-          )}
-          {(items||[]).map((item,idx)=>(
-            <BankItem key={item.id} item={item} idx={idx} sub={sub}
-              editing={editId===item.id} setEditing={v=>setEditId(v?item.id:null)}
-              onDel={()=>del(item.id)} onPatch={f=>patch(item.id,f)}
-              onSetAImg={f=>setAImg(item.id,f)} onLb={setLb}
-            />
-          ))}
-          {(items||[]).length>0&&<div onClick={()=>qRef.current?.click()} style={{border:"1px dashed rgba(255,255,255,0.05)",borderRadius:"7px",padding:"10px",textAlign:"center",cursor:"pointer",color:"#252535",fontSize:"11px"}}>＋ 繼續上傳</div>}
-        </div>
+          </div>
+
+          {/* Upload bar */}
+          <div style={{padding:"8px 14px",borderBottom:"1px solid rgba(255,255,255,0.04)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+            <div style={{fontSize:"11px",color:sub.color,fontWeight:600}}>{sub.name} · {unit?.name} <span style={{color:"#3a3a4a",fontWeight:400}}>({items.length}題)</span></div>
+            <button onClick={()=>qRef.current?.click()} style={{padding:"5px 12px",borderRadius:"6px",fontSize:"11px",fontWeight:600,background:`linear-gradient(135deg,${sub.color},${sub.color}cc)`,border:"none",color:"#fff",whiteSpace:"nowrap",cursor:"pointer"}}>＋ 上傳</button>
+            <input ref={qRef} type="file" multiple accept="image/*" style={{display:"none"}} onChange={e=>{addQImgs(e.target.files);e.target.value="";}}/>
+          </div>
+
+          {/* Items list */}
+          <div style={{flex:1,overflowY:"auto",padding:"10px 14px",display:"flex",flexDirection:"column",gap:"6px"}}>
+            {uploading.length>0&&(
+              <div style={{borderRadius:"9px",background:"rgba(114,85,184,0.07)",border:"1px solid rgba(114,85,184,0.2)",padding:"10px 14px",display:"flex",flexDirection:"column",gap:"7px",marginBottom:"4px"}}>
+                <div style={{fontSize:"10px",color:"#9b6bbf",fontFamily:"'IBM Plex Mono',monospace",letterSpacing:"1px"}}>上傳中</div>
+                {uploading.map(u=>(
+                  <div key={u.id} style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                    <div style={{fontSize:"11px",color:u.step==="done"?"#3d9e6e":u.step==="error"?"#d95f3b":"#9b6bbf",flexShrink:0}}>
+                      {u.step==="done"?"✓":u.step==="error"?"✕":u.step==="ai"?"🤖":u.step==="uploading"?"☁️":"📷"}
+                    </div>
+                    <div style={{flex:1,fontSize:"11px",color:"#888",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u.name}</div>
+                    <div style={{fontSize:"10px",color:u.step==="done"?"#3d9e6e":u.step==="error"?"#d95f3b":"#7255b8",flexShrink:0,fontFamily:"'IBM Plex Mono',monospace"}}>
+                      {u.step==="reading"?"讀取…":u.step==="uploading"?"上傳…":u.step==="ai"?"AI題解…":u.step==="saving"?"儲存…":u.step==="done"?"完成":"失敗"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {(items||[]).length===0&&uploading.length===0&&(
+              <div onClick={()=>qRef.current?.click()} style={{border:"1px dashed rgba(255,255,255,0.07)",borderRadius:"9px",padding:"32px 16px",textAlign:"center",cursor:"pointer",color:"#2a2a3a",fontSize:"12px"}}>
+                <div style={{fontSize:"24px",marginBottom:"6px"}}>🖼</div>點擊上傳題目圖片
+              </div>
+            )}
+            {(items||[]).map((item,idx)=>(
+              <BankItem key={item.id} item={item} idx={idx} sub={sub}
+                editing={editId===item.id} setEditing={v=>setEditId(v?item.id:null)}
+                onDel={()=>del(item.id)} onPatch={f=>patch(item.id,f)}
+                onSetAImg={f=>setAImg(item.id,f)} onLb={setLb}
+              />
+            ))}
+            {(items||[]).length>0&&<div onClick={()=>qRef.current?.click()} style={{border:"1px dashed rgba(255,255,255,0.05)",borderRadius:"7px",padding:"10px",textAlign:"center",cursor:"pointer",color:"#252535",fontSize:"11px"}}>＋ 繼續上傳</div>}
+          </div>
+        </>)}
       </div>
     </div>
   );
@@ -739,7 +792,8 @@ function BankItem({ item, idx, sub, editing, setEditing, onDel, onPatch, onSetAI
   const [year, setYear] = useState(item.source_year||"");
   const [type, setType] = useState(item.source_type||"");
   const [confirmDel, setConfirmDel] = useState(false);
-  const [regenState, setRegenState] = useState("idle"); // idle | loading | done | error
+  const [regenState, setRegenState] = useState("idle");
+  const [expanded, setExpanded] = useState(false);
   const aRef = useRef();
 
   useEffect(()=>{
@@ -828,21 +882,35 @@ function BankItem({ item, idx, sub, editing, setEditing, onDel, onPatch, onSetAI
 
       {confirmDel && <ConfirmDeleteModal onConfirm={()=>{setConfirmDel(false);onDel();}} onClose={()=>setConfirmDel(false)}/>}
 
-      {/* Images */}
-      <div style={{display:"flex"}}>
-        <div style={{flex:1,cursor:"pointer",borderRight:"1px solid rgba(255,255,255,0.04)",minHeight:"64px",display:"flex",alignItems:"center",justifyContent:"center"}}
-          onClick={()=>item.q_url&&onLb({src:item.q_url,title:`#${idx+1} 題目`})}>
-          {item.q_url?<img src={item.q_url} style={{width:"100%",maxHeight:"90px",objectFit:"contain",display:"block",padding:"4px"}} alt="q"/>
-                    :<div style={{fontSize:"11px",color:"#2a2a3a",textAlign:"center",padding:"8px"}}>題目<br/>無圖</div>}
+      {/* Expand toggle */}
+      <div style={{display:"flex",alignItems:"center",padding:"5px 9px",borderTop:"1px solid rgba(255,255,255,0.04)",gap:"8px",cursor:"pointer"}} onClick={()=>setExpanded(v=>!v)}>
+        <div style={{flex:1,display:"flex",gap:"8px",alignItems:"center"}}>
+          {item.q_url?<span style={{fontSize:"10px",color:"#4f82cc"}}>🖼 題目</span>:<span style={{fontSize:"10px",color:"#333"}}>🖼 無題目</span>}
+          {item.a_url?<span style={{fontSize:"10px",color:"#3d9e6e"}}>✓ 答案</span>:<span style={{fontSize:"10px",color:"#333"}}>+ 無答案</span>}
+          {item.explanation?<span style={{fontSize:"10px",color:"#7255b8"}}>🤖 題解</span>:null}
         </div>
-        <div style={{flex:1,cursor:"pointer",background:"rgba(61,158,110,0.03)",minHeight:"64px",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}
-          onClick={()=>item.a_url?onLb({src:item.a_url,title:`#${idx+1} 答案`}):aRef.current?.click()}>
-          {item.a_url?<img src={item.a_url} style={{width:"100%",maxHeight:"90px",objectFit:"contain",display:"block",padding:"4px"}} alt="a"/>
-                    :<div style={{fontSize:"11px",color:"#2a3e2e",textAlign:"center",padding:"8px"}}>＋<br/>答案</div>}
-          {item.a_url&&<button onClick={e=>{e.stopPropagation();aRef.current?.click();}} style={{position:"absolute",bottom:3,right:3,padding:"1px 5px",borderRadius:"3px",fontSize:"9px",background:"rgba(0,0,0,0.5)",border:"none",color:"#666",cursor:"pointer"}}>換</button>}
-          <input ref={aRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{onSetAImg(e.target.files?.[0]);e.target.value="";}}/>
-        </div>
+        <span style={{fontSize:"10px",color:"#444"}}>{expanded?"▲":"▼"}</span>
       </div>
+
+      {/* Collapsible images */}
+      {expanded&&(
+        <div style={{borderTop:"1px solid rgba(255,255,255,0.04)"}}>
+          <div style={{display:"flex"}}>
+            <div style={{flex:1,cursor:"pointer",borderRight:"1px solid rgba(255,255,255,0.04)",minHeight:"80px",display:"flex",alignItems:"center",justifyContent:"center"}}
+              onClick={()=>item.q_url&&onLb({src:item.q_url,title:`#${idx+1} 題目`})}>
+              {item.q_url?<img src={item.q_url} style={{width:"100%",maxHeight:"160px",objectFit:"contain",display:"block",padding:"6px"}} alt="q"/>
+                        :<div style={{fontSize:"11px",color:"#2a2a3a",textAlign:"center",padding:"8px"}}>無題目圖片</div>}
+            </div>
+            <div style={{flex:1,cursor:"pointer",background:"rgba(61,158,110,0.03)",minHeight:"80px",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}
+              onClick={()=>item.a_url?onLb({src:item.a_url,title:`#${idx+1} 答案`}):aRef.current?.click()}>
+              {item.a_url?<img src={item.a_url} style={{width:"100%",maxHeight:"160px",objectFit:"contain",display:"block",padding:"6px"}} alt="a"/>
+                        :<div style={{fontSize:"11px",color:"#2a3e2e",textAlign:"center",padding:"8px",cursor:"pointer"}}>點擊上傳<br/>答案圖片</div>}
+              {item.a_url&&<button onClick={e=>{e.stopPropagation();aRef.current?.click();}} style={{position:"absolute",bottom:4,right:4,padding:"2px 7px",borderRadius:"4px",fontSize:"9px",background:"rgba(0,0,0,0.6)",border:"none",color:"#888",cursor:"pointer"}}>換圖</button>}
+              <input ref={aRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{onSetAImg(e.target.files?.[0]);e.target.value="";}}/>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Regenerate explanation button */}
       <div style={{padding:"6px 9px",borderTop:"1px solid rgba(255,255,255,0.04)"}}>
