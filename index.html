@@ -24,6 +24,7 @@ const SB_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 const BANK_PASSWORD = "890330";
 const BUCKET = "quiz-images";
 const TABLE  = "questions";
+const AI_WORKER = "https://blue-dust-fd94.limi-david3.workers.dev";
 
 const sbH = () => ({
   "Content-Type": "application/json",
@@ -579,23 +580,17 @@ function BankDrawer({ bank, refreshBank, syncState, onClose, setLb }) {
         const filename = Date.now() + "_" + Math.random().toString(36).slice(2,8) + "." + f.name.split(".").pop();
         const qUrl = await uploadImage(b64, f.type, filename);
 
-        // AI generate explanation
+        // AI generate explanation via Cloudflare Worker
         setUploading(prev=>prev.map(u=>u.id===ue.id?{...u,step:"ai"}:u));
         const subName=getSub(sid)?.name||"", unitName=getUnit(sid,uid)?.name||"";
-        const prompt = "這是一道【"+subName+"－"+unitName+"】的土木工程計算題圖片。\n請用繁體中文條列式說明解題流程，包含：已知條件、使用公式或定理、逐步計算過程、最終答案。只需回傳題解內容。";
         let explanation = "";
         try {
-          const resp = await fetch("https://api.anthropic.com/v1/messages", {
+          const resp = await fetch(AI_WORKER, {
             method:"POST", headers:{"Content-Type":"application/json"},
-            body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1000,
-              messages:[{ role:"user", content:[
-                { type:"image", source:{ type:"base64", media_type:f.type, data:b64.split(",")[1] }},
-                { type:"text", text:prompt }
-              ]}]
-            })
+            body: JSON.stringify({ imageUrl: qUrl, subName, unitName })
           });
           const d = await resp.json();
-          explanation = d.content?.map(b=>b.text||"").join("\n")||"";
+          explanation = d.explanation || "";
         } catch {}
 
         // Save to Supabase DB
@@ -758,30 +753,14 @@ function BankItem({ item, idx, sub, editing, setEditing, onDel, onPatch, onSetAI
     if (!item.q_url) return;
     setRegenState("loading");
     try {
-      const subName  = sub?.name  || "";
-      const unitName = sub?.units ? "" : "";
-      const prompt = `這是一道【${subName}】的土木工程計算題圖片。
-請用繁體中文，以條列式文字詳細說明解題流程，包含：
-1. 題目分析（已知條件、求解目標）
-2. 使用的公式或定理
-3. 逐步計算過程
-4. 最終答案
 
-請用清楚易懂的文字說明，適合學生學習。
-只需回傳題解內容，不需要其他說明。`;
 
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      const resp = await fetch(AI_WORKER, {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({
-          model:"claude-sonnet-4-20250514", max_tokens:1000,
-          messages:[{ role:"user", content:[
-            { type:"image", source:{ type:"url", url: item.q_url }},
-            { type:"text", text:prompt }
-          ]}]
-        })
+        body: JSON.stringify({ imageUrl: item.q_url, subName: sub?.name||"", unitName: "" })
       });
       const data = await resp.json();
-      const txt  = data.content?.map(b=>b.text||"").join("\n")||"";
+      const txt  = data.explanation || "";
       if (txt) {
         onPatch({ explanation: txt });
         setRegenState("done");
