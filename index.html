@@ -895,32 +895,40 @@ function BankItem({ item, idx, sub, editing, setEditing, onDel, onPatch, onSetAI
       {/* Collapsible images */}
       {expanded&&(
         <div style={{borderTop:"1px solid rgba(255,255,255,0.04)"}}>
-          {/* Question image */}
-          <div style={{borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
-            <div style={{fontSize:"10px",color:"#4f82cc",padding:"6px 10px 4px",fontWeight:600}}>🖼 題目</div>
-            <div style={{cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:"4px 8px 8px"}}
-              onClick={()=>item.q_url&&onLb({src:item.q_url,title:`#${idx+1} 題目`})}>
-              {item.q_url
-                ?<img src={item.q_url} style={{width:"100%",height:"auto",objectFit:"contain",display:"block",borderRadius:"6px"}} alt="q"/>
-                :<div style={{fontSize:"11px",color:"#2a2a3a",textAlign:"center",padding:"20px"}}>無題目圖片</div>}
-            </div>
-          </div>
-          {/* Answer image */}
-          <div style={{background:"rgba(61,158,110,0.03)"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 10px 4px"}}>
-              <span style={{fontSize:"10px",color:"#3d9e6e",fontWeight:600}}>✓ 答案</span>
-              <button onClick={()=>aRef.current?.click()} style={{fontSize:"10px",color:"#555",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"4px",padding:"2px 8px",cursor:"pointer"}}>
-                {item.a_url?"換圖":"上傳答案"}
+          {/* Action buttons row - always visible at top */}
+          <div style={{display:"flex",gap:"6px",padding:"8px 10px",borderBottom:"1px solid rgba(255,255,255,0.04)",background:"rgba(255,255,255,0.02)"}}>
+            <button onClick={()=>item.q_url&&onLb({src:item.q_url,title:`#${idx+1} 題目`})} disabled={!item.q_url}
+              style={{flex:1,padding:"6px",borderRadius:"6px",fontSize:"11px",background:"rgba(79,130,204,0.08)",border:"1px solid rgba(79,130,204,0.2)",color:item.q_url?"#4f82cc":"#333",cursor:item.q_url?"pointer":"default"}}>
+              🖼 {item.q_url?"查看題目":"無題目"}
+            </button>
+            <button onClick={()=>item.a_url?onLb({src:item.a_url,title:`#${idx+1} 答案`}):aRef.current?.click()}
+              style={{flex:1,padding:"6px",borderRadius:"6px",fontSize:"11px",background:"rgba(61,158,110,0.08)",border:"1px solid rgba(61,158,110,0.2)",color:"#3d9e6e",cursor:"pointer"}}>
+              {item.a_url?"✓ 查看答案":"＋ 上傳答案"}
+            </button>
+            {item.a_url&&(
+              <button onClick={()=>aRef.current?.click()}
+                style={{padding:"6px 10px",borderRadius:"6px",fontSize:"11px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",color:"#555",cursor:"pointer"}}>
+                換圖
               </button>
-              <input ref={aRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{onSetAImg(e.target.files?.[0]);e.target.value="";}}/>
-            </div>
-            <div style={{cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 8px 8px"}}
-              onClick={()=>item.a_url&&onLb({src:item.a_url,title:`#${idx+1} 答案`})}>
-              {item.a_url
-                ?<img src={item.a_url} style={{width:"100%",height:"auto",objectFit:"contain",display:"block",borderRadius:"6px"}} alt="a"/>
-                :<div style={{fontSize:"11px",color:"#2a4a3a",textAlign:"center",padding:"20px",cursor:"pointer"}} onClick={()=>aRef.current?.click()}>點擊上傳答案圖片</div>}
-            </div>
+            )}
+            <input ref={aRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{onSetAImg(e.target.files?.[0]);e.target.value="";}}/>
           </div>
+          {/* Question image */}
+          {item.q_url&&(
+            <div style={{padding:"8px",borderBottom:"1px solid rgba(255,255,255,0.04)",cursor:"pointer"}}
+              onClick={()=>onLb({src:item.q_url,title:`#${idx+1} 題目`})}>
+              <div style={{fontSize:"10px",color:"#4f82cc",marginBottom:"4px",fontWeight:600}}>🖼 題目圖片（點擊放大）</div>
+              <img src={item.q_url} style={{width:"100%",height:"auto",display:"block",borderRadius:"6px",maxHeight:"300px",objectFit:"contain"}} alt="q"/>
+            </div>
+          )}
+          {/* Answer image */}
+          {item.a_url&&(
+            <div style={{padding:"8px",background:"rgba(61,158,110,0.03)",cursor:"pointer"}}
+              onClick={()=>onLb({src:item.a_url,title:`#${idx+1} 答案`})}>
+              <div style={{fontSize:"10px",color:"#3d9e6e",marginBottom:"4px",fontWeight:600}}>✓ 答案圖片（點擊放大）</div>
+              <img src={item.a_url} style={{width:"100%",height:"auto",display:"block",borderRadius:"6px",maxHeight:"300px",objectFit:"contain"}} alt="a"/>
+            </div>
+          )}
         </div>
       )}
 
