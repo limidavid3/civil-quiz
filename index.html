@@ -895,18 +895,30 @@ function BankItem({ item, idx, sub, editing, setEditing, onDel, onPatch, onSetAI
       {/* Collapsible images */}
       {expanded&&(
         <div style={{borderTop:"1px solid rgba(255,255,255,0.04)"}}>
-          <div style={{display:"flex"}}>
-            <div style={{flex:1,cursor:"pointer",borderRight:"1px solid rgba(255,255,255,0.04)",minHeight:"80px",display:"flex",alignItems:"center",justifyContent:"center"}}
+          {/* Question image */}
+          <div style={{borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
+            <div style={{fontSize:"10px",color:"#4f82cc",padding:"6px 10px 4px",fontWeight:600}}>🖼 題目</div>
+            <div style={{cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:"4px 8px 8px"}}
               onClick={()=>item.q_url&&onLb({src:item.q_url,title:`#${idx+1} 題目`})}>
-              {item.q_url?<img src={item.q_url} style={{width:"100%",maxHeight:"160px",objectFit:"contain",display:"block",padding:"6px"}} alt="q"/>
-                        :<div style={{fontSize:"11px",color:"#2a2a3a",textAlign:"center",padding:"8px"}}>無題目圖片</div>}
+              {item.q_url
+                ?<img src={item.q_url} style={{width:"100%",height:"auto",objectFit:"contain",display:"block",borderRadius:"6px"}} alt="q"/>
+                :<div style={{fontSize:"11px",color:"#2a2a3a",textAlign:"center",padding:"20px"}}>無題目圖片</div>}
             </div>
-            <div style={{flex:1,cursor:"pointer",background:"rgba(61,158,110,0.03)",minHeight:"80px",display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}
-              onClick={()=>item.a_url?onLb({src:item.a_url,title:`#${idx+1} 答案`}):aRef.current?.click()}>
-              {item.a_url?<img src={item.a_url} style={{width:"100%",maxHeight:"160px",objectFit:"contain",display:"block",padding:"6px"}} alt="a"/>
-                        :<div style={{fontSize:"11px",color:"#2a3e2e",textAlign:"center",padding:"8px",cursor:"pointer"}}>點擊上傳<br/>答案圖片</div>}
-              {item.a_url&&<button onClick={e=>{e.stopPropagation();aRef.current?.click();}} style={{position:"absolute",bottom:4,right:4,padding:"2px 7px",borderRadius:"4px",fontSize:"9px",background:"rgba(0,0,0,0.6)",border:"none",color:"#888",cursor:"pointer"}}>換圖</button>}
+          </div>
+          {/* Answer image */}
+          <div style={{background:"rgba(61,158,110,0.03)"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 10px 4px"}}>
+              <span style={{fontSize:"10px",color:"#3d9e6e",fontWeight:600}}>✓ 答案</span>
+              <button onClick={()=>aRef.current?.click()} style={{fontSize:"10px",color:"#555",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"4px",padding:"2px 8px",cursor:"pointer"}}>
+                {item.a_url?"換圖":"上傳答案"}
+              </button>
               <input ref={aRef} type="file" accept="image/*" style={{display:"none"}} onChange={e=>{onSetAImg(e.target.files?.[0]);e.target.value="";}}/>
+            </div>
+            <div style={{cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:"0 8px 8px"}}
+              onClick={()=>item.a_url&&onLb({src:item.a_url,title:`#${idx+1} 答案`})}>
+              {item.a_url
+                ?<img src={item.a_url} style={{width:"100%",height:"auto",objectFit:"contain",display:"block",borderRadius:"6px"}} alt="a"/>
+                :<div style={{fontSize:"11px",color:"#2a4a3a",textAlign:"center",padding:"20px",cursor:"pointer"}} onClick={()=>aRef.current?.click()}>點擊上傳答案圖片</div>}
             </div>
           </div>
         </div>
