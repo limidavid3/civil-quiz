@@ -138,9 +138,9 @@ function App() {
   // persist is no longer a bulk save — individual ops handle DB directly
   // but we still need a way to refresh bank state from outside
   const refreshBank = useCallback(()=>{
-    setSyncState("loading");
+    setSyncState("saving");
     loadBank()
-      .then(data=>{ setBank(data); setSyncState("ok"); })
+      .then(data=>{ setBank([...data]); setSyncState("ok"); })
       .catch(()=>setSyncState("error"));
   },[]);
 
@@ -556,12 +556,12 @@ function PaperScreen({ session, setScreen, setLb }) {
 
 function BankDrawer({ bank, refreshBank, syncState, onClose, setLb }) {
   const[sid,setSid]=useState(SUBJECTS[0].id);
-  const[uid,setUid]=useState(SUBJECTS[0].units[0].id);
+  const[unitId,setUnitId]=useState(SUBJECTS[0].units[0].id);
   const[editId,setEditId]=useState(null);
   const[uploading,setUploading]=useState([]);
   const[opState,setOpState]=useState("ok"); // ok | saving | error
   const qRef=useRef();
-  const sub=getSub(sid),unit=getUnit(sid,uid),items=(bank||[]).filter(q=>q.sid===sid&&q.uid===uid);
+  const sub=getSub(sid),unit=getUnit(sid,unitId),items=(bank||[]).filter(q=>q.sid===sid&&q.uid===unitId);
 
   const addQImgs = async (files) => {
     const arr = Array.from(files).filter(f=>f.type.startsWith("image/"));
@@ -582,7 +582,7 @@ function BankDrawer({ bank, refreshBank, syncState, onClose, setLb }) {
 
         // AI generate explanation via Cloudflare Worker
         setUploading(prev=>prev.map(u=>u.id===ue.id?{...u,step:"ai"}:u));
-        const subName=getSub(sid)?.name||"", unitName=getUnit(sid,uid)?.name||"";
+        const subName=getSub(sid)?.name||"", unitName=getUnit(sid,unitId)?.name||"";
         let explanation = "";
         try {
           const resp = await fetch(AI_WORKER, {
@@ -595,7 +595,7 @@ function BankDrawer({ bank, refreshBank, syncState, onClose, setLb }) {
 
         // Save to Supabase DB
         setUploading(prev=>prev.map(u=>u.id===ue.id?{...u,step:"saving"}:u));
-        await insertQuestion({ sid, uid, q_url:qUrl, a_url:"", source_year:"", source_type:"", explanation });
+        await insertQuestion({ sid, uid:unitId, q_url:qUrl, a_url:"", source_year:"", source_type:"", explanation });
         setUploading(prev=>prev.map(u=>u.id===ue.id?{...u,step:"done"}:u));
       } catch(e) {
         setUploading(prev=>prev.map(u=>u.id===ue.id?{...u,step:"error"}:u));
@@ -662,14 +662,14 @@ function BankDrawer({ bank, refreshBank, syncState, onClose, setLb }) {
         <div style={{padding:"10px 14px 6px",borderBottom:"1px solid rgba(255,255,255,0.05)",flexShrink:0}}>
           <div style={{display:"flex",gap:"4px",flexWrap:"wrap",marginBottom:"7px"}}>
             {SUBJECTS.map(s=>{const cnt=bank.filter(q=>q.sid===s.id).length;return(
-              <button key={s.id} onClick={()=>{setSid(s.id);setUid(s.units[0].id);}} style={{padding:"3px 9px",borderRadius:"15px",fontSize:"11px",fontWeight:sid===s.id?700:400,background:sid===s.id?s.bg:"transparent",border:`1px solid ${sid===s.id?s.border:"rgba(255,255,255,0.07)"}`,color:sid===s.id?s.color:"#4a4a5a",whiteSpace:"nowrap"}}>
+              <button key={s.id} onClick={()=>{setSid(s.id);setUnitId(s.units[0].id);}} style={{padding:"3px 9px",borderRadius:"15px",fontSize:"11px",fontWeight:sid===s.id?700:400,background:sid===s.id?s.bg:"transparent",border:`1px solid ${sid===s.id?s.border:"rgba(255,255,255,0.07)"}`,color:sid===s.id?s.color:"#4a4a5a",whiteSpace:"nowrap"}}>
                 {s.short}{cnt>0&&<span style={{opacity:.5,marginLeft:2}}>·{cnt}</span>}
               </button>
             );})}
           </div>
           <div style={{display:"flex",gap:"4px",flexWrap:"wrap"}}>
-            {sub.units.map(u=>{const cnt=bank.filter(q=>q.sid===sid&&q.uid===u.id).length,act=uid===u.id;return(
-              <button key={u.id} onClick={()=>setUid(u.id)} style={{padding:"2px 8px",borderRadius:"5px",fontSize:"10px",fontWeight:act?700:400,background:act?sub.bg:"transparent",border:`1px solid ${act?sub.border:"rgba(255,255,255,0.05)"}`,color:act?sub.color:"#3a3a4a",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"3px"}}>
+            {sub.units.map(u=>{const cnt=(bank||[]).filter(q=>q.sid===sid&&q.uid===u.id).length,act=unitId===u.id;return(
+              <button key={u.id} onClick={()=>setUnitId(u.id)} style={{padding:"2px 8px",borderRadius:"5px",fontSize:"10px",fontWeight:act?700:400,background:act?sub.bg:"transparent",border:`1px solid ${act?sub.border:"rgba(255,255,255,0.05)"}`,color:act?sub.color:"#3a3a4a",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:"3px"}}>
                 <span style={{fontSize:"8px",color:IMP.colors[u.imp]}}>{IMP.stars[u.imp]}</span>{u.name}{cnt>0&&<span style={{color:act?sub.color:"#333",fontFamily:"'IBM Plex Mono',monospace"}}>{cnt}</span>}
               </button>
             );})}
@@ -846,12 +846,12 @@ function BankItem({ item, idx, sub, editing, setEditing, onDel, onPatch, onSetAI
 
       {/* Regenerate explanation button */}
       <div style={{padding:"6px 9px",borderTop:"1px solid rgba(255,255,255,0.04)"}}>
-        <button onClick={regenExplanation} disabled={regenState==="loading"||!item.qImg}
+        <button onClick={regenExplanation} disabled={regenState==="loading"||!item.q_url}
           style={{width:"100%",padding:"5px",borderRadius:"5px",fontSize:"10px",fontWeight:600,
             background: regenState==="done"?"rgba(61,158,110,0.1)": regenState==="error"?"rgba(217,95,59,0.1)":"rgba(114,85,184,0.08)",
             border:`1px solid ${regenState==="done"?"rgba(61,158,110,0.25)":regenState==="error"?"rgba(217,95,59,0.25)":"rgba(114,85,184,0.2)"}`,
             color: regenState==="done"?"#3d9e6e": regenState==="error"?"#d95f3b":"#7255b8",
-            cursor: regenState==="loading"||!item.qImg?"not-allowed":"pointer",
+            cursor: regenState==="loading"||!item.q_url?"not-allowed":"pointer",
             display:"flex",alignItems:"center",justifyContent:"center",gap:"5px"}}>
           {regenState==="loading"
             ? <><span style={{animation:"spin 1s linear infinite",display:"inline-block"}}>⟳</span> AI 生成題解中…</>
